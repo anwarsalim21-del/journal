@@ -1,0 +1,1394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Desk Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Inter:wght@200;300&display=swap">
+<style>
+/* Layout: one dark-blue ledger. Big page title, two pill tabs, then a row grid: day column (teal, month labels in pink) | instrument | type | P/L box | journal pen. */
+:root{
+  color-scheme:dark;
+  --bg:#0a1226;
+  --bg-grad:radial-gradient(900px 520px at 88% -6%,rgba(45,212,191,.10),transparent 62%),linear-gradient(155deg,#12285a 0%,#0c1c40 30%,#081229 64%,#050a17 100%);
+  --bg-2:#0f1a33;
+  --hover:rgba(143,167,214,.09);
+  --sep:rgba(143,167,214,.15);
+  --sep-strong:rgba(143,167,214,.3);
+  --text:#e8eefb;
+  --muted:#8a9bbd;
+  --teal:#2dd4bf;
+  --teal-bg:rgba(45,212,191,.12);
+  --pink:#f472b6;
+  --pink-bg:rgba(244,114,182,.12);
+  --blue:#7dc8ff;
+  --blue-bg:rgba(125,200,255,.12);
+  --font-sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --cols:76px minmax(0,1.3fr) minmax(0,1.1fr) 136px 96px;
+}
+*{box-sizing:border-box}
+body{margin:0;background-color:var(--bg);background-image:var(--bg-grad);background-repeat:no-repeat;background-size:cover;background-attachment:fixed;color:var(--text);font:14px/1.5 var(--font-sans);min-height:100vh}
+h1,h2,p{margin:0}
+.wrap{max-width:960px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.wrap{padding-block:28px 64px}
+.title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:"Inter",var(--font-sans);font-size:clamp(32px,7vw,52px);line-height:1.1;font-weight:200;letter-spacing:-.01em;text-transform:none}
+.status{font-size:12px;color:var(--muted)}
+.pills{display:flex;gap:8px;margin:18px 0 22px}
+.pills a{padding:5px 18px;border:1px solid var(--sep-strong);border-radius:99px;color:var(--muted);text-decoration:none;font-weight:500}
+.pills a:hover{color:var(--text)}
+.pills a[aria-current="page"]{color:var(--text);border-color:rgba(232,238,251,.6);background:rgba(232,238,251,.08)}
+.pills a:focus-visible,.jbtn:focus-visible,.btn:focus-visible,.linkbtn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.row{display:grid;grid-template-columns:var(--cols);align-items:center;border-bottom:1px solid var(--sep)}
+.cell{min-width:0;padding:4px 3px}
+.cell.date{border-right:1px solid var(--sep-strong);padding:4px 0;text-align:center;align-self:stretch;display:flex;align-items:center;justify-content:center}
+.row.head{border-bottom-color:var(--sep-strong)}
+.row.head .cell{font-size:11px;letter-spacing:.12em;color:var(--muted);padding:8px 11px}
+.row.head .cell.date{padding:8px 0}
+.row.head .cell.pl-h{text-align:center}
+.row.month{border-bottom:0}
+.row.month .cell{padding-block:14px 2px}
+.row.month .cell.date{align-items:flex-end}
+.mname{color:var(--pink);font-weight:600;letter-spacing:.1em;font-size:13px}
+.yr{color:var(--pink);opacity:.6;font-size:11px;margin-left:6px;letter-spacing:.04em}
+
+.day{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;min-height:38px;border-radius:6px;cursor:pointer}
+.day:hover,.day:focus-within{background:var(--hover)}
+.day:focus-within{box-shadow:0 0 0 2px rgba(125,200,255,.3)}
+.dnum{color:var(--teal);font:600 15px/1.2 var(--font-mono)}
+.dmon{color:var(--pink);font:500 10px/1.2 var(--font-sans);letter-spacing:.1em}
+.dpick{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+
+.fld{font:inherit;color:var(--text);background:transparent;border:1px solid transparent;border-radius:6px;padding:8px;width:100%;min-width:0;text-overflow:ellipsis}
+.fld:hover{background:var(--hover)}
+.fld:focus-visible{outline:none;border-color:var(--blue);background:var(--hover);box-shadow:0 0 0 2px rgba(125,200,255,.2)}
+.fld::placeholder{color:var(--muted);opacity:.75}
+.fld.plbox{text-align:center;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:500;border-radius:6px}
+.fld.plbox.pos{color:var(--teal);border-color:var(--teal);background:var(--teal-bg)}
+.fld.plbox.neg{color:var(--pink);border-color:var(--pink);background:var(--pink-bg)}
+.fld.plbox.neu{color:var(--text);border-color:var(--sep-strong)}
+
+.jr{display:flex;justify-content:center;gap:6px}
+.jbtn{position:relative;width:36px;height:36px;display:inline-grid;place-items:center;border:1px solid var(--blue);border-radius:6px;background:var(--blue-bg);color:var(--blue);cursor:pointer;padding:0}
+.jbtn:hover{background:rgba(125,200,255,.22)}
+.jbtn svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.jbtn.has::after{content:"";position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.row.draft-row{background:rgba(125,200,255,.05)}
+.row.add{border-bottom:0}
+.row.add .cell.date{min-height:60px}
+.addbtn{width:34px;height:34px;display:inline-grid;place-items:center;border:1px solid var(--blue);border-radius:50%;background:var(--blue-bg);color:var(--blue);cursor:pointer;padding:0}
+.addbtn:hover{background:rgba(125,200,255,.22)}
+.addbtn:disabled{opacity:.4;cursor:not-allowed}
+.addbtn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.addbtn svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.jbtn.discard{border-color:var(--sep-strong);background:transparent;color:var(--muted)}
+.jbtn.discard:hover{color:var(--text);background:var(--hover)}
+.jbtn.discard svg{stroke-width:2}
+.hint{margin-top:10px;font-size:12px;color:var(--muted)}
+.empty{padding:22px 8px;color:var(--muted);text-align:center}
+.foot{margin-top:28px;font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.linkbtn{font:inherit;font-size:12px;background:none;border:0;padding:0;color:var(--blue);text-decoration:underline;cursor:pointer}
+.linkbtn.danger{color:var(--pink)}
+.linkbtn.danger[data-armed]{background:var(--pink);color:var(--bg);text-decoration:none;padding:3px 8px;border-radius:6px}
+
+.panel{background:var(--bg-2);border:1px solid var(--sep);border-radius:8px;padding:20px;color:var(--muted)}
+.panel strong{display:block;color:var(--text);font-size:16px;margin-bottom:4px}
+
+.modal{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(4,9,20,.72);padding:16px max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dialog{width:100%;max-width:560px;max-height:100%;overflow:auto;background:var(--bg-2);border:1px solid var(--sep-strong);border-radius:10px;padding:18px}
+.dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.dlg-head h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:600;margin-bottom:6px}
+.sub{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.sub .d{color:var(--teal);font:600 14px var(--font-mono)}
+.sub .n{font-weight:500}
+.sub .t{color:var(--muted)}
+.chip{display:inline-block;border:1px solid var(--sep-strong);border-radius:6px;padding:0 9px;font:500 13px/1.6 var(--font-mono)}
+.chip.pos{color:var(--teal);border-color:var(--teal);background:var(--teal-bg)}
+.chip.neg{color:var(--pink);border-color:var(--pink);background:var(--pink-bg)}
+.x{font:inherit;font-size:22px;line-height:1;background:none;border:1px solid var(--sep-strong);color:var(--muted);border-radius:6px;width:34px;height:34px;cursor:pointer}
+.x:hover{color:var(--text)}
+.x:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+textarea{width:100%;min-height:220px;resize:vertical;font:inherit;font-size:15px;line-height:1.6;color:var(--text);background:var(--bg);border:1px solid var(--sep-strong);border-radius:8px;padding:12px}
+textarea::placeholder{color:var(--muted)}
+.dlg-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.btn{font:inherit;font-weight:500;padding:8px 18px;border-radius:6px;border:1px solid var(--blue);background:var(--blue);color:var(--bg);cursor:pointer}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--bg);padding:8px 14px;border-radius:6px;z-index:40;max-width:calc(100% - 32px);font-size:13px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.mlegend{font-size:12px;color:var(--muted);margin:0 0 14px;max-width:760px}
+.mlegend .t{color:var(--teal);font-weight:600}
+.mlegend .k{color:var(--pink);font-weight:600}
+.secnav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 22px}
+.secnav button{font:inherit;font-size:12px;color:var(--muted);background:none;border:1px solid var(--sep-strong);border-radius:99px;padding:3px 12px;cursor:pointer}
+.secnav button:hover{color:var(--text)}
+.secnav button:focus-visible,.plabel:focus-visible,.pedit:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.msec{margin-bottom:36px;scroll-margin-top:12px}
+.msec-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-bottom:8px}
+.msec-head h2{font-size:20px;font-weight:600;letter-spacing:.04em}
+.fpill{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--blue);border:1px solid var(--blue);background:var(--blue-bg);border-radius:99px;padding:0 10px}
+.mscroll{overflow-x:auto;padding-bottom:4px}
+.mrow{display:grid;grid-template-columns:var(--mcols);align-items:center;border-bottom:1px solid var(--sep)}
+.mrow.mhead{border-bottom-color:var(--sep-strong)}
+.mrow.madd{border-bottom:0}
+.mcell{min-width:0;padding:4px 3px;position:relative}
+.mcell.mh{display:flex;flex-direction:column;text-align:center;padding:8px 6px 6px}
+.ml{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.mu{font-size:10px;color:var(--muted);opacity:.85}
+.mper{border-right:1px solid var(--sep-strong);padding:4px 0;display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:stretch;min-height:46px}
+.madd .mper{min-height:62px}
+.plabel{font:inherit;background:none;border:1px solid transparent;border-radius:6px;padding:4px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.25;color:var(--text)}
+.plabel:hover{background:var(--hover)}
+.pm{color:var(--pink);font:600 13px/1.25 var(--font-mono);letter-spacing:.08em}
+.py{color:var(--teal);font:500 12px/1.25 var(--font-mono)}
+.pedit{width:112px;text-align:center}
+.exp{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px dashed var(--sep-strong);border-radius:99px;padding:0 6px;margin-top:2px}
+.fld.mtext{text-align:left}
+.lvl .fld{text-align:left;padding-right:50px}
+.chg{position:absolute;right:11px;top:50%;transform:translateY(-50%);font:500 11px var(--font-mono);pointer-events:none}
+.chg.up{color:var(--teal)}
+.chg.dn{color:var(--pink)}
+.mempty{margin:0;padding:16px 8px;color:var(--muted)}
+.mmore{margin-top:6px}
+.mcell.jr{gap:6px}
+
+#view-geo{--gcols:76px minmax(120px,.9fr) minmax(200px,2fr) minmax(120px,1fr) 104px 96px}
+.grow{display:grid;grid-template-columns:var(--gcols);align-items:center;border-bottom:1px solid var(--sep)}
+.grow.head{border-bottom-color:var(--sep-strong)}
+.grow.head .cell{font-size:11px;letter-spacing:.12em;color:var(--muted);padding:8px 11px}
+.grow.head .cell.date{padding:8px 0}
+.grow.head .cell.ctr{text-align:center}
+.grow.month{border-bottom:0}
+.grow.month .cell{padding-block:14px 2px}
+.grow.month .cell.date{align-items:flex-end}
+.grow.add{border-bottom:0}
+.grow.add .cell.date{min-height:60px}
+.ipill{font:500 12px var(--font-sans);width:92px;padding:4px 0;border:1px solid var(--sep-strong);border-radius:99px;background:transparent;color:var(--muted);cursor:pointer}
+.ipill:hover{background:var(--hover)}
+.ipill.pos{color:var(--teal);border-color:var(--teal);background:var(--teal-bg)}
+.ipill.neg{color:var(--pink);border-color:var(--pink);background:var(--pink-bg)}
+.ipill:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.jbtn.discard.armed{width:auto;padding:0 9px;border-color:var(--pink);color:var(--pink);background:var(--pink-bg);font:500 11px var(--font-sans)}
+
+@media (max-width:560px){
+  :root{--cols:54px minmax(0,1fr) minmax(0,1fr) 98px 72px}
+  .fld{padding:8px 5px;font-size:13px}
+  .row.head .cell{padding:8px 6px}
+  .yr{display:block;margin-left:0}
+  .jbtn{width:30px;height:30px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+.statusbox{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.auth{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));background-color:var(--bg);background-image:var(--bg-grad);background-repeat:no-repeat;background-size:cover}
+.auth-card{width:100%;max-width:380px;display:grid;gap:10px;background:var(--bg-2);border:1px solid var(--sep-strong);border-radius:10px;padding:24px}
+.auth-card h2{font-family:"Inter",var(--font-sans);font-size:28px;font-weight:200;letter-spacing:-.01em}
+.auth-card label{font-size:12px;color:var(--muted);margin-top:4px}
+.auth-in{border-color:var(--sep-strong);background:var(--bg)}
+.auth-msg{min-height:18px;font-size:12px;color:var(--muted)}
+.auth-msg.bad{color:var(--pink)}
+.auth-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--sep-strong)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <div class="title-row">
+    <h1 id="page-title">Trades</h1>
+    <div class="statusbox"><p id="status" class="status" role="status">Loading…</p><button class="linkbtn" id="signout" type="button" hidden>Sign out</button></div>
+  </div>
+  <nav class="pills" aria-label="Pages">
+    <a href="#trade">Trade</a>
+    <a href="#macro">Macro</a>
+    <a href="#geo">Geopolitics</a>
+  </nav>
+
+  <section id="view-trade">
+    <div id="sheet">
+      <div class="row head" aria-hidden="true">
+        <div class="cell date"></div>
+        <div class="cell">INSTRUMENT</div>
+        <div class="cell">TYPE</div>
+        <div class="cell pl-h">P/L</div>
+        <div class="cell"></div>
+      </div>
+      <div id="list"></div>
+      <p id="empty" class="empty" hidden>No trades yet. Tap + below to add your first one.</p>
+      <div id="drafts"></div>
+      <div class="row add">
+        <div class="cell date"><button class="addbtn" id="add-trade" type="button" data-act="add" aria-label="Add a trade for today"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      </div>
+    </div>
+    <p class="hint">Tap + to add a row dated today. It saves as soon as it has an instrument and a P/L. Type + or − after the amount and the box turns teal or pink. Every cell can be edited, and the pen opens the journal note for that trade.</p>
+    <p class="foot" id="ex-note" hidden>Example trades are showing. <button class="linkbtn" type="button" data-act="clear-examples">Remove example data</button></p>
+  </section>
+
+  <section id="view-macro" hidden>
+    <p class="mlegend"><span class="t">Teal</span> means positive growth, a PMI or beat rate of 50 or more, or a level above the previous reading. <span class="k">Pink</span> means the opposite. Tap a period to change it, tap + to add a row for the current period, and use the pen for a note.</p>
+    <nav class="secnav" id="secnav" aria-label="Macro sections"></nav>
+    <div id="msections"></div>
+    <p class="foot" id="mex-note" hidden>The rows marked example are illustrative numbers, not real readings. <button class="linkbtn" type="button" data-act="clear-examples">Remove all example data</button></p>
+  </section>
+  <section id="view-geo" hidden>
+    <p class="mlegend">Log events that could move markets. Market impact is <span class="t">teal</span> for positive, <span class="k">pink</span> for negative and grey for neutral. Tap the pill to change it. Tap + for a new row dated today, and use the pen for your analysis.</p>
+    <div class="mscroll"><div style="min-width:760px">
+      <div class="grow head" aria-hidden="true"><div class="cell date"></div><div class="cell">REGION</div><div class="cell">EVENT</div><div class="cell">AFFECTS</div><div class="cell ctr">IMPACT</div><div class="cell"></div></div>
+      <div id="glist"></div>
+      <p id="gempty" class="empty" hidden>No events yet. Tap + below to log the first one.</p>
+      <div class="grow add"><div class="cell date"><button class="addbtn" id="add-geo" type="button" data-act="gadd" aria-label="Add a geopolitical event for today"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div></div>
+    </div></div>
+    <p class="foot" id="gex-note" hidden>The rows marked example are illustrative, not real news. <button class="linkbtn" type="button" data-act="clear-examples">Remove all example data</button></p>
+  </section>
+</main>
+
+<div id="auth" class="auth" hidden>
+  <form id="auth-form" class="auth-card" novalidate>
+    <h2>Desk Journal</h2>
+    <label for="auth-email">Email</label>
+    <input class="fld auth-in" id="auth-email" type="email" autocomplete="email" spellcheck="false">
+    <label for="auth-pass">Password</label>
+    <input class="fld auth-in" id="auth-pass" type="password" autocomplete="current-password">
+    <p id="auth-msg" class="auth-msg" role="status"></p>
+    <div class="auth-actions">
+      <button class="btn" type="submit" id="auth-signin">Sign in</button>
+      <button class="btn ghost" type="button" id="auth-signup">Create account</button>
+    </div>
+  </form>
+</div>
+<div id="jm" class="modal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="jm-title">
+    <div class="dlg-head">
+      <div><h2 id="jm-title">Journal</h2><div class="sub" id="jm-sub"></div></div>
+      <button class="x" type="button" data-act="close-journal" aria-label="Close and save">×</button>
+    </div>
+    <label class="sr" for="jm-body">Journal note</label>
+    <textarea id="jm-body" placeholder="What happened? How did you feel? What would you do differently?"></textarea>
+    <div class="dlg-foot">
+      <button class="linkbtn danger" type="button" id="jm-del" data-act="delete-trade">Delete this trade</button>
+      <button class="btn" type="button" id="jm-save" data-act="save-journal">Save</button>
+    </div>
+  </div>
+</div>
+<datalist id="dl-stance"><option value="Neutral"></option><option value="Accommodative"></option><option value="Withdrawal of accommodation"></option><option value="Calibrated tightening"></option></datalist>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+  /* ---------- storage and sign-in (Supabase) ---------- */
+  var Backend = (function () {
+    var sb = null, uid = null, cache = {}, listeners = {}, busy = 0, watching = false;
+    function cl(v) { return (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v; }
+    function isObj(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
+    function merge(a, b) {
+      var o = cl(a);
+      Object.keys(b).forEach(function (k) { o[k] = (isObj(b[k]) && isObj(o[k])) ? merge(o[k], b[k]) : cl(b[k]); });
+      return o;
+    }
+    function newId() {
+      var a = new Uint8Array(16), s = '', chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      (window.crypto || window.msCrypto).getRandomValues(a);
+      for (var i = 0; i < a.length; i++) s += chars.charAt(a[i] % 36);
+      return s;
+    }
+    function fail(err) {
+      var m = (err && err.message) || 'Request failed', c = 'unavailable';
+      if (err && (err.code === '42501' || err.status === 401 || err.status === 403 || /jwt|token|expired/i.test(m))) c = 'revoked';
+      return { code: c, message: m };
+    }
+    function has(m, id) { return Object.prototype.hasOwnProperty.call(m, id); }
+    function snap(col, filters) {
+      var m = cache[col] || {};
+      var docs = Object.keys(m).filter(function (id) {
+        return filters.every(function (f) { return f[1] === '==' && m[id][f[0]] === f[2]; });
+      }).map(function (id) { return { id: id, exists: true, data: function () { return m[id]; } }; });
+      return { docs: docs, size: docs.length, empty: docs.length === 0 };
+    }
+    function fire(col) { (listeners[col] || []).slice().forEach(function (l) { l.fn(snap(col, l.filters)); }); }
+
+    async function loadAll() {
+      var out = {}, from = 0, size = 1000;
+      for (;;) {
+        var r = await sb.from('docs').select('collection,id,data').eq('user_id', uid).order('collection').order('id').range(from, from + size - 1);
+        if (r.error) throw r.error;
+        (r.data || []).forEach(function (row) { (out[row.collection] = out[row.collection] || {})[row.id] = row.data || {}; });
+        if (!r.data || r.data.length < size) break;
+        from += size;
+      }
+      return out;
+    }
+    async function refresh() {
+      if (busy > 0 || !sb) return;
+      try {
+        var fresh = await loadAll();
+        if (busy > 0) return;
+        var cols = {};
+        Object.keys(cache).forEach(function (c) { cols[c] = 1; });
+        Object.keys(fresh).forEach(function (c) { cols[c] = 1; });
+        cache = fresh;
+        Object.keys(cols).forEach(fire);
+      } catch (e) { /* keep what is on screen */ }
+    }
+    async function put(col, id, data) {
+      var m = (cache[col] = cache[col] || {}), had = has(m, id), prev = m[id];
+      m[id] = data; fire(col);
+      busy++;
+      try {
+        var r = await sb.from('docs').upsert({ user_id: uid, collection: col, id: id, data: data, updated_at: new Date().toISOString() }, { onConflict: 'user_id,collection,id' });
+        if (r.error) throw r.error;
+      } catch (e) {
+        if (had) m[id] = prev; else delete m[id];
+        fire(col);
+        throw fail(e);
+      } finally { busy--; }
+    }
+    async function del(col, id) {
+      var m = (cache[col] = cache[col] || {}), had = has(m, id), prev = m[id];
+      if (had) { delete m[id]; fire(col); }
+      busy++;
+      try {
+        var r = await sb.from('docs').delete().eq('user_id', uid).eq('collection', col).eq('id', id);
+        if (r.error) throw r.error;
+      } catch (e) {
+        if (had) { m[id] = prev; fire(col); }
+        throw fail(e);
+      } finally { busy--; }
+    }
+    function docRef(col, id) {
+      return {
+        id: id, path: col + '/' + id,
+        set: function (data) { return put(col, id, cl(data)); },
+        update: function (patch) {
+          var cur = (cache[col] || {})[id];
+          if (!cur) return Promise.reject({ code: 'invalid_argument', message: 'That row no longer exists.' });
+          return put(col, id, merge(cur, patch));
+        },
+        delete: function () { return del(col, id); },
+        get: function () {
+          var m = cache[col] || {}, ok = has(m, id);
+          return Promise.resolve({ id: id, exists: ok, data: function () { return ok ? m[id] : undefined; } });
+        }
+      };
+    }
+    function query(col, filters) {
+      return {
+        where: function (f, op, val) { return query(col, filters.concat([[f, op, val]])); },
+        get: function () { return Promise.resolve(snap(col, filters)); },
+        onSnapshot: function (next) {
+          var l = { fn: next, filters: filters };
+          (listeners[col] = listeners[col] || []).push(l);
+          setTimeout(function () { next(snap(col, filters)); }, 0);
+          return function () { listeners[col] = (listeners[col] || []).filter(function (x) { return x !== l; }); };
+        }
+      };
+    }
+    var db = {
+      collection: function (col) {
+        var q = query(col, []);
+        q.path = col;
+        q.doc = function (id) { return docRef(col, id || newId()); };
+        q.add = function (data) { var ref = docRef(col, newId()); return ref.set(data).then(function () { return ref; }); };
+        return q;
+      },
+      doc: function (path) { var i = path.indexOf('/'); return docRef(path.slice(0, i), path.slice(i + 1)); }
+    };
+    return {
+      load: async function (client, userId) {
+        sb = client; uid = userId;
+        cache = await loadAll();
+        if (!watching) {
+          watching = true;
+          document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+        }
+        return db;
+      }
+    };
+  })();
+
+  var Auth = (function () {
+    var cfg = window.APP_CONFIG || {}, sb = null;
+    function g(id) { return document.getElementById(id); }
+    function say(t, bad) { var m = g('auth-msg'); m.textContent = t || ''; m.className = 'auth-msg' + (bad ? ' bad' : ''); }
+    function lock(on) { g('auth-signin').disabled = on; g('auth-signup').disabled = on; }
+    function configured() {
+      var u = String(cfg.SUPABASE_URL || ''), k = String(cfg.SUPABASE_ANON_KEY || '');
+      return !!(u && k && u.indexOf('YOUR-') < 0 && k.indexOf('YOUR-') < 0);
+    }
+    function start() {
+      return new Promise(function (resolve) {
+        var gate = g('auth'), done = false;
+        gate.hidden = false;
+        if (!configured()) {
+          say('This site is not connected to a database yet. Open config.js and add your Supabase URL and key. The README has the steps.', true);
+          lock(true); resolve(null); return;
+        }
+        if (!window.supabase || !window.supabase.createClient) {
+          say('Could not load the database library. Check your internet connection and reload.', true);
+          lock(true); resolve(null); return;
+        }
+        sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+        async function finish(session) {
+          if (done) return;
+          done = true; lock(true); say('Loading your journal…');
+          try {
+            var db = await Backend.load(sb, session.user.id);
+            gate.hidden = true;
+            var so = g('signout'); so.hidden = false;
+            so.onclick = async function () { try { await sb.auth.signOut(); } catch (e) { /* ignore */ } location.reload(); };
+            resolve(db);
+          } catch (e) {
+            done = false; lock(false);
+            say('Could not load your data: ' + ((e && e.message) || 'unknown error') + '. Check that you ran schema.sql in Supabase.', true);
+          }
+        }
+        function creds() {
+          var email = g('auth-email').value.trim(), pass = g('auth-pass').value;
+          if (!email || !pass) { say('Enter your email and a password.', true); return null; }
+          if (pass.length < 6) { say('The password needs at least 6 characters.', true); return null; }
+          return { email: email, password: pass };
+        }
+        g('auth-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var c = creds(); if (!c) return;
+          lock(true); say('Signing in…');
+          try {
+            var r = await sb.auth.signInWithPassword(c);
+            if (r.error) { say(r.error.message, true); lock(false); return; }
+            lock(false); finish(r.data.session);
+          } catch (err) { say('Could not reach the database. Check your connection.', true); lock(false); }
+        });
+        g('auth-signup').addEventListener('click', async function () {
+          var c = creds(); if (!c) return;
+          lock(true); say('Creating your account…');
+          try {
+            var r = await sb.auth.signUp(c);
+            if (r.error) { say(r.error.message, true); lock(false); return; }
+            if (r.data && r.data.session) { lock(false); finish(r.data.session); }
+            else { say('Account created. Check your email to confirm it, then sign in.'); lock(false); }
+          } catch (err) { say('Could not reach the database. Check your connection.', true); lock(false); }
+        });
+        sb.auth.onAuthStateChange(function (evt) { if (evt === 'SIGNED_OUT' && done) location.reload(); });
+        sb.auth.getSession().then(function (r) {
+          if (r && r.data && r.data.session) finish(r.data.session);
+          else say('Sign in to open your journal, or create an account.');
+        }).catch(function () { say('Could not reach the database. Check your connection.', true); });
+      });
+    }
+    return { start: start };
+  })();
+
+  var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  var S = { db: null, trades: [], journal: [], macrodata: [], geo: [], notes: {}, loaded: {}, route: 'trade', mshow: {}, pendingFocus: null, gPending: null };
+  var JM = { id: null, opener: null, orig: '', note: null, mode: 'trade', coll: '' };
+  var PEN = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>';
+
+  function $(s, r) { return (r || document).querySelector(s); }
+  function v(id) { return $('#' + id).value; }
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  var INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+  function fmtDateLong(iso) {
+    try { return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return iso; }
+  }
+  function dayOf(iso) { var d = parseInt(String(iso || '').slice(8, 10), 10); return isFinite(d) ? String(d) : '–'; }
+
+  /* ---------- P/L parsing and colour ---------- */
+  function parsePL(s) {
+    s = String(s == null ? '' : s);
+    var neg = /[-−–]/.test(s), pos = /\+/.test(s);
+    var m = s.replace(/[,\s₹]|rs\.?/gi, '').match(/\d+(?:\.\d+)?|\.\d+/);
+    var sign = neg ? -1 : (pos ? 1 : 0);
+    if (!m) return { sign: sign, value: null };
+    var n = parseFloat(m[0]);
+    return { sign: sign, value: neg ? -n : n };
+  }
+  function fmtPL(n) { if (!n) return '0'; return (n < 0 ? '−' : '+') + INR.format(Math.abs(n)); }
+  function paintSign(inp, sign) {
+    inp.classList.remove('pos', 'neg', 'neu');
+    inp.classList.add(sign < 0 ? 'neg' : (sign > 0 ? 'pos' : 'neu'));
+  }
+  function paintVal(inp, n) { paintSign(inp, n > 0 ? 1 : (n < 0 ? -1 : 0)); }
+
+  /* ---------- reading a trade (works for older rows too) ---------- */
+  function plOf(t) {
+    if (t.pl != null && isFinite(t.pl)) return t.pl;
+    if (isFinite(t.entry) && isFinite(t.exit) && isFinite(t.qty)) return (t.exit - t.entry) * t.qty * (t.side === 'short' ? -1 : 1) - (t.fees || 0);
+    return 0;
+  }
+  function typeOf(t) { return String(t.type != null ? t.type : (t.setup || '')); }
+  function cmpAsc(a, b) {
+    var da = a.date || '', db = b.date || '';
+    if (da !== db) return da < db ? -1 : 1;
+    var ca = a.createdAt || 0, cb = b.createdAt || 0;
+    if (ca !== cb) return ca < cb ? -1 : 1;
+    return a.id < b.id ? -1 : 1;
+  }
+  function tradeById(id) { for (var i = 0; i < S.trades.length; i++) if (S.trades[i].id === id) return S.trades[i]; return null; }
+
+  /* ---------- autofill from earlier entries ---------- */
+  function candidates(field, prefix) {
+    var lp = prefix.toLowerCase(), cnt = {}, disp = {};
+    S.trades.forEach(function (t) {
+      var x = String(field === 'instrument' ? (t.instrument || '') : typeOf(t)).trim();
+      if (!x) return;
+      var k = x.toLowerCase(); cnt[k] = (cnt[k] || 0) + 1; disp[k] = x;
+    });
+    var keys = Object.keys(cnt).filter(function (k) { return k.indexOf(lp) === 0 && k !== lp; });
+    keys.sort(function (a, b) { return cnt[b] - cnt[a] || (a < b ? -1 : 1); });
+    return keys.length ? disp[keys[0]] : null;
+  }
+  function suggestType(instr) {
+    var li = String(instr).trim().toLowerCase(), best = null;
+    S.trades.forEach(function (t) {
+      if (String(t.instrument || '').trim().toLowerCase() !== li || !typeOf(t).trim()) return;
+      if (!best || cmpAsc(t, best) > 0) best = t;
+    });
+    return best ? typeOf(best).trim() : '';
+  }
+  function autoComplete(e) {
+    var inp = e.target;
+    if (e.isComposing || (e.inputType && e.inputType.indexOf('delete') === 0)) return;
+    var val = inp.value;
+    if (!val || inp.selectionStart !== val.length) return;
+    var c = candidates(inp.getAttribute('data-f'), val);
+    if (!c) return;
+    inp.value = c;
+    try { inp.setSelectionRange(val.length, c.length); } catch (_) { /* ignore */ }
+  }
+
+  /* ---------- toast & errors ---------- */
+  var toastT;
+  function toast(m) {
+    var t = $('#toast'); t.textContent = m; t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 3600);
+  }
+  function errMsg(e) {
+    var c = e && e.code;
+    if (c === 'quota_exceeded') return 'The database is full. Delete some entries, then try again.';
+    if (c === 'invalid_argument') return 'You do not have permission to change this data.';
+    if (c === 'revoked') return 'Access to this page was withdrawn. Reload to continue.';
+    return 'Could not save. Check your connection and try again.';
+  }
+
+  /* ---------- row building ---------- */
+  function buildRow(t) {
+    var el = document.createElement('div');
+    el.className = 'row'; el.setAttribute('data-id', t.id);
+    var id = t.id;
+    el.innerHTML =
+      '<div class="cell date"><label class="day" for="f-' + id + '-date"><span class="dnum"></span><input class="dpick" id="f-' + id + '-date" data-f="date" type="date" aria-label="Date"></label></div>' +
+      '<div class="cell"><input class="fld" id="f-' + id + '-instrument" data-f="instrument" aria-label="Instrument" autocomplete="off" spellcheck="false"></div>' +
+      '<div class="cell"><input class="fld" id="f-' + id + '-type" data-f="type" aria-label="Type" autocomplete="off" spellcheck="false"></div>' +
+      '<div class="cell"><input class="fld plbox neu" id="f-' + id + '-pl" data-f="pl" aria-label="Profit or loss" autocomplete="off" inputmode="text"></div>' +
+      '<div class="cell jr"><button class="jbtn" type="button" data-act="journal">' + PEN + '</button><button class="jbtn discard" type="button" data-act="tdel" aria-label="Delete this trade">' + XICON + '</button></div>';
+    return el;
+  }
+  function setIfIdle(inp, val, force) {
+    if (inp.value === val) return;
+    if (!force && document.activeElement === inp) return;
+    inp.value = val;
+  }
+  function syncRow(el, t, force) {
+    var q = function (f) { return el.querySelector('[data-f="' + f + '"]'); };
+    el.querySelector('.dnum').textContent = dayOf(t.date);
+    setIfIdle(q('date'), t.date || '', force);
+    setIfIdle(q('instrument'), String(t.instrument || ''), force);
+    setIfIdle(q('type'), typeOf(t), force);
+    var pl = q('pl'), n = plOf(t);
+    if (force || document.activeElement !== pl) { setIfIdle(pl, fmtPL(n), true); paintVal(pl, n); }
+    var btn = el.querySelector('.jbtn'), note = S.notes[t.id];
+    btn.classList.toggle('has', !!(note && note.body && String(note.body).trim()));
+    btn.setAttribute('aria-label', 'Write journal for ' + (t.instrument || 'trade') + ' on ' + fmtDateLong(t.date));
+  }
+  function buildMonth(key) {
+    var el = document.createElement('div');
+    el.className = 'row month';
+    var mi = parseInt(key.slice(5, 7), 10) - 1;
+    el.innerHTML = '<div class="cell date"><div><span class="mname">' + (MONTHS[mi] || '—') + '</span><span class="yr">' + key.slice(0, 4) + '</span></div></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>';
+    return el;
+  }
+
+  var cache = {}, lastSig = null;
+  function renderList() {
+    var list = $('#list');
+    var ts = S.trades.slice().sort(cmpAsc), items = [], prev = null;
+    ts.forEach(function (t) {
+      var k = String(t.date || '').slice(0, 7);
+      if (k !== prev) { items.push({ m: true, key: k }); prev = k; }
+      items.push({ t: t });
+    });
+    var sig = items.map(function (i) { return i.m ? 'M' + i.key : 'R' + i.t.id; }).join('|');
+    var live = {};
+    ts.forEach(function (t) { live[t.id] = 1; var el = cache[t.id] || (cache[t.id] = buildRow(t)); syncRow(el, t, false); });
+    Object.keys(cache).forEach(function (id) { if (!live[id]) delete cache[id]; });
+    if (sig !== lastSig) {
+      lastSig = sig;
+      var ae = document.activeElement, keep = (ae && list.contains(ae)) ? ae : null;
+      var frag = document.createDocumentFragment();
+      items.forEach(function (i) { frag.appendChild(i.m ? buildMonth(i.key) : cache[i.t.id]); });
+      list.replaceChildren(frag);
+      if (keep && keep.isConnected) { try { keep.focus(); } catch (_) { /* ignore */ } }
+    }
+    $('#empty').hidden = ts.length > 0 || !S.loaded.trades || $('#drafts').children.length > 0;
+  }
+  function renderAll() {
+    try {
+      S.notes = {};
+      S.journal.forEach(function (j) { if (j.tradeId) S.notes[j.tradeId] = j; });
+      renderList();
+      renderMacro();
+      renderGeo();
+      $('#status').textContent = (S.db && S.loaded.trades) ? '' : (S.db ? 'Loading…' : $('#status').textContent);
+      $('#ex-note').hidden = !S.trades.some(function (t) { return t.example; });
+    } catch (e) { if (window.console) console.error(e); }
+  }
+  var raf = 0;
+  function schedule() { if (raf) return; raf = requestAnimationFrame(function () { raf = 0; renderAll(); }); }
+
+  /* ---------- new rows: the + button adds one dated today ---------- */
+  var draftSeq = 0;
+  function setDraftDate(row, d) {
+    row.setAttribute('data-date', d);
+    row.querySelector('.dnum').textContent = dayOf(d);
+    row.querySelector('.dmon').textContent = MONTHS[parseInt(d.slice(5, 7), 10) - 1] || '';
+    row.querySelector('[data-f="date"]').value = d;
+  }
+  function addDraft() {
+    if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+    var key = 'd' + (++draftSeq), el = document.createElement('div');
+    el.className = 'row draft-row'; el.setAttribute('data-draft', key);
+    el.innerHTML =
+      '<div class="cell date"><label class="day" for="dr-' + key + '-date"><span class="dnum"></span><span class="dmon"></span><input class="dpick" id="dr-' + key + '-date" data-f="date" type="date" aria-label="Date of the new trade"></label></div>' +
+      '<div class="cell"><input class="fld" data-f="instrument" placeholder="Instrument" aria-label="Instrument" autocomplete="off" spellcheck="false"></div>' +
+      '<div class="cell"><input class="fld" data-f="type" placeholder="Type" aria-label="Type" autocomplete="off" spellcheck="false"></div>' +
+      '<div class="cell"><input class="fld plbox neu" data-f="pl" placeholder="P/L" aria-label="Profit or loss" autocomplete="off" inputmode="text"></div>' +
+      '<div class="cell jr"><button class="jbtn discard" type="button" data-act="discard" aria-label="Discard this new row"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
+    setDraftDate(el, today());
+    $('#drafts').appendChild(el);
+    $('#empty').hidden = true;
+    el.querySelector('[data-f="instrument"]').focus();
+    el.scrollIntoView({ block: 'nearest' });
+  }
+  async function tryCommit(row) {
+    if (row.getAttribute('data-busy')) return;
+    var q = function (f) { return row.querySelector('[data-f="' + f + '"]'); };
+    var inst = q('instrument').value.trim(), p = parsePL(q('pl').value);
+    if (!inst || p.value == null) return;
+    var type = q('type').value.trim() || suggestType(inst);
+    row.setAttribute('data-busy', '1');
+    try {
+      await S.db.collection('trades').add({ date: row.getAttribute('data-date'), instrument: inst, type: type, pl: p.value, createdAt: Date.now() });
+      row.remove();
+      renderAll();
+    } catch (e) { row.removeAttribute('data-busy'); toast(errMsg(e)); }
+  }
+
+  /* ---------- editing existing rows ---------- */
+  async function saveFields(id, data) {
+    data.example = false;
+    try { await S.db.doc('trades/' + id).update(data); }
+    catch (e) { toast(errMsg(e)); var t = tradeById(id), el = cache[id]; if (t && el) syncRow(el, t, true); }
+  }
+  function onInput(e) {
+    var f = e.target.getAttribute && e.target.getAttribute('data-f');
+    if (!f) return;
+    if (f === 'pl') paintSign(e.target, parsePL(e.target.value).sign);
+    else if (f === 'instrument' || f === 'type') autoComplete(e);
+  }
+  function onChange(e) {
+    var inp = e.target, f = inp.getAttribute && inp.getAttribute('data-f');
+    if (!f) return;
+    var row = inp.closest('.row'), draft = row.hasAttribute('data-draft'), id = row.getAttribute('data-id');
+    var t = draft ? null : tradeById(id);
+    if (!draft && !t) return;
+    if (!draft && !S.db) { toast('Saving is unavailable in this view.'); syncRow(row, t, true); return; }
+
+    if (f === 'date') {
+      var d = inp.value || '';
+      if (draft) setDraftDate(row, d || today());
+      else if (d) saveFields(id, { date: d });
+      else syncRow(row, t, true);
+    } else if (f === 'pl') {
+      var p = parsePL(inp.value);
+      if (p.value == null) {
+        if (draft) { if (inp.value.trim()) toast('Enter an amount, like +5000 or 3000−.'); inp.value = ''; paintSign(inp, 0); }
+        else { toast('Enter an amount, like +5000 or 3000−.'); syncRow(row, t, true); }
+        return;
+      }
+      inp.value = fmtPL(p.value); paintVal(inp, p.value);
+      if (!draft) saveFields(id, { pl: p.value }); else tryCommit(row);
+    } else if (f === 'instrument') {
+      var name = inp.value.trim(), typeInp = row.querySelector('[data-f="type"]');
+      if (draft) { if (name && !typeInp.value.trim()) typeInp.value = suggestType(name); tryCommit(row); return; }
+      if (!name) { toast('The instrument cannot be empty.'); syncRow(row, t, true); return; }
+      var data = { instrument: name };
+      if (!typeInp.value.trim()) { var st = suggestType(name); if (st) { typeInp.value = st; data.type = st; } }
+      saveFields(id, data);
+    } else if (f === 'type') {
+      if (!draft) saveFields(id, { type: inp.value.trim() }); else tryCommit(row);
+    }
+  }
+  function onKey(e) {
+    if (e.key !== 'Enter' || !e.target.getAttribute || !e.target.getAttribute('data-f')) return;
+    var f = e.target.getAttribute('data-f');
+    if (f === 'date') return;
+    var row = e.target.closest('.row');
+    e.preventDefault();
+    if (row.hasAttribute('data-draft')) {
+      e.target.dispatchEvent(new Event('change', { bubbles: true }));
+      var nxt = { instrument: 'type', type: 'pl' }[f], nel = nxt && row.isConnected ? row.querySelector('[data-f="' + nxt + '"]') : null;
+      if (nel) nel.focus();
+    } else e.target.blur();
+  }
+
+  /* ---------- journal pop-up ---------- */
+  function openJournal(id, opener) {
+    var t = tradeById(id); if (!t) return;
+    JM.mode = 'trade'; $('#jm-title').textContent = 'Journal'; $('#jm-body').placeholder = 'What happened? How did you feel? What would you do differently?';
+    JM.id = id; JM.opener = opener; JM.note = S.notes[id] || null; JM.orig = JM.note ? String(JM.note.body || '') : '';
+    var n = plOf(t);
+    $('#jm-sub').innerHTML = '';
+    var d = document.createElement('span'); d.className = 'd'; d.textContent = fmtDateLong(t.date);
+    var nm = document.createElement('span'); nm.className = 'n'; nm.textContent = t.instrument || '';
+    var ty = document.createElement('span'); ty.className = 't'; ty.textContent = typeOf(t);
+    var ch = document.createElement('span'); ch.className = 'chip ' + (n > 0 ? 'pos' : (n < 0 ? 'neg' : '')); ch.textContent = fmtPL(n);
+    [d, nm, ty, ch].forEach(function (x) { $('#jm-sub').appendChild(x); });
+    $('#jm-body').value = JM.orig;
+    var del = $('#jm-del'); del.removeAttribute('data-armed'); del.setAttribute('data-label', 'Delete this trade'); del.textContent = 'Delete this trade';
+    $('#jm').hidden = false;
+    $('#jm-body').focus();
+  }
+  async function closeJournal(save) {
+    if (JM.id == null) return;
+    if (save) {
+      var body = v('jm-body');
+      if (body !== JM.orig) {
+        if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+        try {
+          if (JM.mode !== 'trade') await S.db.doc(JM.coll + '/' + JM.id).update({ note: body, example: false });
+          else {
+            var t = tradeById(JM.id);
+            if (JM.note) await S.db.doc('journal/' + JM.note.id).update({ body: body, updated: today(), example: false });
+            else await S.db.doc('journal/' + JM.id).set({ tradeId: JM.id, date: t ? t.date : today(), body: body, updated: today(), createdAt: Date.now() });
+          }
+        } catch (e) { toast(errMsg(e)); return; }
+      }
+    }
+    $('#jm').hidden = true;
+    var op = JM.opener; JM.id = null; JM.opener = null; JM.note = null;
+    if (op && op.isConnected) { try { op.focus(); } catch (_) { /* ignore */ } }
+  }
+  async function deleteTrade() {
+    var id = JM.id, note = S.notes[id];
+    try {
+      if (JM.mode !== 'trade') {
+        await S.db.doc(JM.coll + '/' + id).delete();
+        $('#jm').hidden = true; JM.id = null; JM.opener = null; JM.note = null;
+        toast('Row deleted.');
+        return;
+      }
+      await S.db.doc('trades/' + id).delete();
+      if (note) await S.db.doc('journal/' + note.id).delete();
+      $('#jm').hidden = true; JM.id = null; JM.opener = null; JM.note = null;
+      toast('Trade deleted.');
+    } catch (e) { toast(errMsg(e)); }
+  }
+  async function clearExamples() {
+    try {
+      var cols = ['trades', 'journal', 'macro', 'studies', 'macrodata', 'geo'];
+      for (var c = 0; c < cols.length; c++) {
+        var snap = await S.db.collection(cols[c]).where('example', '==', true).get();
+        var paths = snap.docs.map(function (d) { return cols[c] + '/' + d.id; });
+        for (var i = 0; i < paths.length; i += 10) await Promise.all(paths.slice(i, i + 10).map(function (p) { return S.db.doc(p).delete(); }));
+      }
+      toast('Example data removed.');
+    } catch (e) { toast(errMsg(e)); }
+  }
+
+  /* ---------- events ---------- */
+  var sheet = $('#sheet');
+  sheet.addEventListener('input', onInput);
+  sheet.addEventListener('change', onChange);
+  sheet.addEventListener('keydown', onKey);
+  document.addEventListener('click', function (e) {
+    var tg = e.target;
+    if (tg.classList && tg.classList.contains('dpick')) { try { tg.showPicker(); } catch (_) { /* ignore */ } return; }
+    if (tg.id === 'jm') { closeJournal(true); return; }
+    var b = tg.closest ? tg.closest('[data-act]') : null; if (!b) return;
+    var act = b.getAttribute('data-act');
+    if (act === 'journal') { var row = b.closest('.row'); openJournal(row.getAttribute('data-id'), b); }
+    else if (act === 'add') addDraft();
+    else if (act === 'discard') { b.closest('.row').remove(); renderAll(); }
+    else if (act === 'madd') addMRow(b.getAttribute('data-sec'));
+    else if (act === 'mnote') openMacroNote(b.closest('.mrow').getAttribute('data-m'), b);
+    else if (act === 'pedit') startPeriodEdit(b);
+    else if (act === 'mdel') deleteMRow(b);
+    else if (act === 'tdel') deleteTradeRow(b);
+    else if (act === 'gadd') addGRow();
+    else if (act === 'gimpact') { var gg = geoById(b.closest('.grow').getAttribute('data-g')); if (gg) saveG(gg.id, { impact: INEXT[gg.impact] || 'pos' }); }
+    else if (act === 'gnote') openGeoNote(b.closest('.grow').getAttribute('data-g'), b);
+    else if (act === 'gdel') deleteGRow(b);
+    else if (act === 'mmore') { var sid = b.getAttribute('data-sec'); S.mshow[sid] = !S.mshow[sid]; renderMacro(); }
+    else if (act === 'msec') { var tgt = $('#ms-' + b.getAttribute('data-sec')); if (tgt) tgt.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    else if (act === 'close-journal') closeJournal(true);
+    else if (act === 'save-journal') closeJournal(true);
+    else if (act === 'clear-examples') clearExamples();
+    else if (act === 'delete-trade') {
+      if (!b.hasAttribute('data-armed')) {
+        b.setAttribute('data-armed', ''); b.textContent = 'Click again to delete';
+        setTimeout(function () { if (b.isConnected && b.hasAttribute('data-armed')) { b.removeAttribute('data-armed'); b.textContent = b.getAttribute('data-label') || 'Delete this trade'; } }, 3500);
+      } else deleteTrade();
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if ($('#jm').hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeJournal(true); }
+    else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); closeJournal(true); }
+    else if (e.key === 'Tab') {
+      var f = Array.prototype.slice.call($('#jm').querySelectorAll('textarea,button')).filter(function (x) { return !x.disabled; });
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  /* ---------- macro page ---------- */
+  var MSEC = [
+    { id: 'budget', title: 'Union Budget', freq: 'Yearly', pt: 'year', cols: [
+      { k: 'fd', label: 'Fiscal deficit target', unit: '% of GDP', kind: 'level' },
+      { k: 'capex', label: 'Capex', unit: '₹ lakh cr', kind: 'level' },
+      { k: 'borrow', label: 'Gross borrowing', unit: '₹ lakh cr', kind: 'level' }] },
+    { id: 'rbi', title: 'RBI policy', freq: 'Every meeting', pt: 'date', cols: [
+      { k: 'repo', label: 'Repo rate', unit: '%', kind: 'level' },
+      { k: 'stance', label: 'Stance', unit: '', kind: 'text' }] },
+    { id: 'valuation', title: 'Index valuation', freq: 'Weekly', pt: 'date', cols: [
+      { k: 'n50pe', label: 'Nifty 50 P/E', unit: 'times', kind: 'level' },
+      { k: 'n50pb', label: 'Nifty 50 P/B', unit: 'times', kind: 'level' },
+      { k: 'midpe', label: 'Midcap P/E', unit: 'times', kind: 'level' },
+      { k: 'smallpe', label: 'Smallcap P/E', unit: 'times', kind: 'level' }] },
+    { id: 'inflation', title: 'Inflation', freq: 'Monthly', pt: 'month', cols: [
+      { k: 'cpi', label: 'CPI', unit: '% y/y', kind: 'level' },
+      { k: 'wpi', label: 'WPI', unit: '% y/y', kind: 'level' },
+      { k: 'core', label: 'Core', unit: '% y/y', kind: 'level' },
+      { k: 'food', label: 'Food', unit: '% y/y', kind: 'level' }] },
+    { id: 'pmi', title: 'PMI', freq: 'Monthly', pt: 'month', cols: [
+      { k: 'mfg', label: 'Manufacturing', unit: '50 = no change', kind: 'pmi' },
+      { k: 'svc', label: 'Services', unit: '50 = no change', kind: 'pmi' }] },
+    { id: 'credit', title: 'Credit growth', freq: 'Monthly', pt: 'month', cols: [
+      { k: 'credit', label: 'Bank credit', unit: '% y/y', kind: 'sign' }] },
+    { id: 'gdp', title: 'GDP and fiscal deficit', freq: 'Quarterly', pt: 'quarter', cols: [
+      { k: 'gdp', label: 'GDP growth', unit: '% y/y', kind: 'sign' },
+      { k: 'fd', label: 'Fiscal deficit', unit: '% of GDP', kind: 'level' }] },
+    { id: 'earnings', title: 'Earnings', freq: 'Quarterly', pt: 'quarter', cols: [
+      { k: 'rev', label: 'Revenue growth', unit: '% y/y', kind: 'sign' },
+      { k: 'ebitda', label: 'EBITDA growth', unit: '% y/y', kind: 'sign' },
+      { k: 'eps', label: 'EPS growth', unit: '% y/y', kind: 'sign' },
+      { k: 'beat', label: 'Beat estimates', unit: '% of companies', kind: 'pmi' }] }
+  ];
+  var MIDX = {}; MSEC.forEach(function (s) { MIDX[s.id] = s; });
+  var mcache = {}, msig = {}, mprev = {};
+  var MNUM = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+  var PHINT = { month: 'Nov 2026', quarter: 'Q3 FY27', year: 'FY27' };
+
+  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function macroById(id) { for (var i = 0; i < S.macrodata.length; i++) if (S.macrodata[i].id === id) return S.macrodata[i]; return null; }
+  function y4(x) { x = +x; return x < 100 ? 2000 + x : x; }
+  function fyOf(y, m) { return m >= 4 ? y + 1 : y; }
+  function fqOf(m) { return m >= 4 ? Math.floor((m - 4) / 3) + 1 : Math.floor((m + 8) / 3) + 1; }
+  function defPeriod(pt) {
+    var d = new Date(), y = d.getFullYear(), m = d.getMonth() + 1;
+    if (pt === 'date') return today();
+    if (pt === 'month') return y + '-' + p2(m);
+    if (pt === 'quarter') return fyOf(y, m) + '-Q' + fqOf(m);
+    return String(fyOf(y, m));
+  }
+  function periodHTML(pt, key) {
+    var m; key = String(key || '');
+    if (pt === 'month' && (m = key.match(/^(\d{4})-(\d{2})$/))) return '<span class="pm">' + (MONTHS[+m[2] - 1] || '—') + '</span><span class="py">' + m[1] + '</span>';
+    if (pt === 'quarter' && (m = key.match(/^(\d{4})-Q([1-4])$/))) return '<span class="pm">Q' + m[2] + '</span><span class="py">FY' + m[1].slice(2) + '</span>';
+    if (pt === 'year' && (m = key.match(/^(\d{4})$/))) return '<span class="pm">FY</span><span class="py">' + m[1].slice(2) + '</span>';
+    return '<span class="py">' + esc(key) + '</span>';
+  }
+  function periodText(pt, key) {
+    var m; key = String(key || '');
+    if (pt === 'date') return fmtDateLong(key);
+    if (pt === 'month' && (m = key.match(/^(\d{4})-(\d{2})$/))) { var nm = MONTHS[+m[2] - 1] || ''; return nm.charAt(0) + nm.slice(1).toLowerCase() + ' ' + m[1]; }
+    if (pt === 'quarter' && (m = key.match(/^(\d{4})-Q([1-4])$/))) return 'Q' + m[2] + ' FY' + m[1].slice(2);
+    if (pt === 'year' && (m = key.match(/^(\d{4})$/))) return 'FY' + m[1].slice(2);
+    return key;
+  }
+  function parsePeriod(pt, s) {
+    s = String(s || '').trim(); var m;
+    if (pt === 'month') {
+      if ((m = s.match(/^(\d{4})\s*[-\/ ]\s*(\d{1,2})$/))) return (+m[2] >= 1 && +m[2] <= 12) ? m[1] + '-' + p2(+m[2]) : null;
+      if ((m = s.match(/^(\d{1,2})\s*[-\/ ]\s*(\d{4})$/))) return (+m[1] >= 1 && +m[1] <= 12) ? m[2] + '-' + p2(+m[1]) : null;
+      if ((m = s.match(/^([A-Za-z]{3})[A-Za-z]*[\s\-']*(\d{2}|\d{4})$/))) { var i = MONTHS.indexOf(m[1].toUpperCase()); return i > -1 ? y4(m[2]) + '-' + p2(i + 1) : null; }
+      return null;
+    }
+    if (pt === 'quarter') { return (m = s.match(/^Q\s*([1-4])[\s,\-]*FY\s*'?(\d{2}|\d{4})$/i)) ? y4(m[2]) + '-Q' + m[1] : null; }
+    if (pt === 'year') { return (m = s.match(/^(?:FY\s*)?'?(\d{2}|\d{4})$/i)) ? String(y4(m[1])) : null; }
+    return null;
+  }
+  function parseNum(s) {
+    s = String(s == null ? '' : s);
+    var neg = /[-−–]/.test(s), m = s.replace(/[,\s%₹]/g, '').match(/\d+(?:\.\d+)?|\.\d+/);
+    if (!m) return null;
+    var n = parseFloat(m[0]);
+    return { v: neg ? -n : n, sign: neg ? -1 : (/\+/.test(s) ? 1 : 0) };
+  }
+  function fmtM(kind, n) {
+    if (n == null) return '';
+    if (kind === 'sign') return n === 0 ? '0' : (n < 0 ? '−' : '+') + MNUM.format(Math.abs(n));
+    return (n < 0 ? '−' : '') + MNUM.format(Math.abs(n));
+  }
+  function colorM(kind, n) {
+    if (n == null) return 'neu';
+    if (kind === 'sign') return n > 0 ? 'pos' : (n < 0 ? 'neg' : 'neu');
+    if (kind === 'pmi') return n >= 50 ? 'pos' : 'neg';
+    return 'neu';
+  }
+  function paintM(inp, c) { inp.classList.remove('pos', 'neg', 'neu'); inp.classList.add(c); }
+
+  function buildMRow(sec, d) {
+    var el = document.createElement('div'), id = d.id, h = '';
+    el.className = 'mrow'; el.setAttribute('data-m', id);
+    h += '<div class="mcell mper">' + (sec.pt === 'date'
+      ? '<label class="day" for="m-' + id + '-per"><span class="dnum"></span><span class="dmon"></span><input class="dpick" id="m-' + id + '-per" data-mf="period" type="date" aria-label="Date"></label>'
+      : '<button class="plabel" type="button" data-act="pedit" aria-label="Change period"></button><input class="fld pedit" id="m-' + id + '-per" data-mf="period" hidden aria-label="Period" autocomplete="off" spellcheck="false">') +
+      '<span class="exp" hidden>example</span></div>';
+    sec.cols.forEach(function (c) {
+      h += '<div class="mcell' + (c.kind === 'level' ? ' lvl' : '') + '"><input class="fld ' + (c.kind === 'text' ? 'mtext' : 'plbox neu') + '" id="m-' + id + '-' + c.k + '" data-mf="' + c.k + '" data-kind="' + c.kind + '" aria-label="' + esc(c.label) + '" autocomplete="off" spellcheck="false"' + (c.kind === 'text' ? ' list="dl-stance"' : '') + '>' + (c.kind === 'level' ? '<span class="chg"></span>' : '') + '</div>';
+    });
+    h += '<div class="mcell jr"><button class="jbtn" type="button" data-act="mnote">' + PEN + '</button><button class="jbtn discard" type="button" data-act="mdel" aria-label="Delete this row">' + XICON + '</button></div>';
+    el.innerHTML = h;
+    return el;
+  }
+  function syncMRow(el, sec, d, prev, force) {
+    var pt = sec.pt, key = String(d.period || '');
+    if (pt === 'date') {
+      el.querySelector('.dnum').textContent = dayOf(key);
+      var mi = parseInt(key.slice(5, 7), 10) - 1, yy = key.slice(2, 4), cy = String(new Date().getFullYear()).slice(2);
+      el.querySelector('.dmon').textContent = (MONTHS[mi] || '') + (yy && yy !== cy ? " '" + yy : '');
+      setIfIdle(el.querySelector('[data-mf="period"]'), key, force);
+    } else {
+      el.querySelector('.plabel').innerHTML = periodHTML(pt, key);
+    }
+    el.querySelector('.exp').hidden = !d.example;
+    sec.cols.forEach(function (c) {
+      var inp = el.querySelector('[data-mf="' + c.k + '"]'), raw = d.v ? d.v[c.k] : null;
+      if (c.kind === 'text') { setIfIdle(inp, raw == null ? '' : String(raw), force); return; }
+      var n = (raw == null || raw === '' || !isFinite(raw)) ? null : Number(raw);
+      if (force || document.activeElement !== inp) { setIfIdle(inp, n == null ? '' : fmtM(c.kind, n), true); paintM(inp, colorM(c.kind, n)); }
+      var chg = inp.parentNode.querySelector('.chg');
+      if (chg) {
+        var pv = prev ? prev[c.k] : undefined, dl = (n != null && pv != null) ? Math.round((n - pv) * 100) / 100 : 0;
+        chg.textContent = dl ? (dl > 0 ? '▲' : '▼') + MNUM.format(Math.abs(dl)) : '';
+        chg.className = 'chg' + (dl > 0 ? ' up' : (dl < 0 ? ' dn' : ''));
+      }
+    });
+    var jb = el.querySelector('.jbtn');
+    jb.classList.toggle('has', !!(d.note && String(d.note).trim()));
+    jb.setAttribute('aria-label', 'Write a note for ' + sec.title + ', ' + periodText(pt, key));
+  }
+  function renderMacro() {
+    var ae = document.activeElement;
+    MSEC.forEach(function (sec) {
+      var rows = S.macrodata.filter(function (d) { return d.section === sec.id; }).sort(function (a, b) {
+        var pa = String(a.period || ''), pb = String(b.period || '');
+        if (pa !== pb) return pa < pb ? -1 : 1;
+        var ca = a.createdAt || 0, cb = b.createdAt || 0;
+        if (ca !== cb) return ca < cb ? -1 : 1;
+        return a.id < b.id ? -1 : 1;
+      });
+      var last = {};
+      rows.forEach(function (d) {
+        mprev[d.id] = Object.assign({}, last);
+        sec.cols.forEach(function (c) {
+          var raw = d.v ? d.v[c.k] : null;
+          if (c.kind !== 'text' && raw != null && raw !== '' && isFinite(raw)) last[c.k] = Number(raw);
+        });
+      });
+      var vis = S.mshow[sec.id] ? rows : rows.slice(-12), box = $('#mr-' + sec.id);
+      vis.forEach(function (d) {
+        var el = mcache[d.id] || (mcache[d.id] = buildMRow(sec, d));
+        syncMRow(el, sec, d, mprev[d.id], false);
+      });
+      var sig = vis.map(function (d) { return d.id; }).join('|');
+      if (sig !== msig[sec.id]) {
+        msig[sec.id] = sig;
+        var keep = (ae && box.contains(ae)) ? ae : null, frag = document.createDocumentFragment();
+        vis.forEach(function (d) { frag.appendChild(mcache[d.id]); });
+        box.replaceChildren(frag);
+        if (keep && keep.isConnected) { try { keep.focus(); } catch (_) { /* ignore */ } }
+      }
+      $('#me-' + sec.id).hidden = rows.length > 0 || !S.loaded.macrodata;
+      var more = $('#mm-' + sec.id), extra = rows.length - 12;
+      more.hidden = extra <= 0;
+      more.textContent = S.mshow[sec.id] ? 'Show recent rows only' : 'Show ' + extra + ' earlier row' + (extra === 1 ? '' : 's');
+    });
+    var live = {}; S.macrodata.forEach(function (d) { live[d.id] = 1; });
+    Object.keys(mcache).forEach(function (id) { if (!live[id]) { delete mcache[id]; delete mprev[id]; } });
+    $('#mex-note').hidden = !S.macrodata.some(function (d) { return d.example; });
+    if (S.pendingFocus && mcache[S.pendingFocus] && mcache[S.pendingFocus].isConnected) {
+      var f = mcache[S.pendingFocus].querySelector('[data-kind]'); S.pendingFocus = null;
+      if (f) f.focus();
+    }
+  }
+
+  async function addMRow(secId) {
+    var sec = MIDX[secId]; if (!sec) return;
+    if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+    var ref = S.db.collection('macrodata').doc();
+    S.pendingFocus = ref.id;
+    try { await ref.set({ section: secId, period: defPeriod(sec.pt), v: {}, note: '', createdAt: Date.now() }); }
+    catch (e) { S.pendingFocus = null; toast(errMsg(e)); }
+  }
+  async function saveM(id, data) {
+    data.example = false;
+    try { await S.db.doc('macrodata/' + id).update(data); }
+    catch (e) { toast(errMsg(e)); resyncM(id); }
+  }
+  function resyncM(id) {
+    var d = macroById(id), el = mcache[id]; if (!d || !el) return;
+    syncMRow(el, MIDX[d.section], d, mprev[id], true);
+  }
+  function startPeriodEdit(btn) {
+    var row = btn.closest('.mrow'), d = macroById(row.getAttribute('data-m'));
+    if (!d) return;
+    var inp = row.querySelector('.pedit'), t = periodText(MIDX[d.section].pt, d.period);
+    inp.value = t; inp.setAttribute('data-orig', t);
+    btn.hidden = true; inp.hidden = false; inp.focus(); inp.select();
+  }
+  function endPeriodEdit(inp) {
+    inp.hidden = true;
+    var b = inp.parentNode.querySelector('.plabel'); if (b) b.hidden = false;
+  }
+  function onMChange(e) {
+    var inp = e.target, f = inp.getAttribute && inp.getAttribute('data-mf');
+    if (!f) return;
+    var row = inp.closest('.mrow'), id = row.getAttribute('data-m'), d = macroById(id);
+    if (!d) return;
+    var sec = MIDX[d.section];
+    if (!S.db) { toast('Saving is unavailable in this view.'); resyncM(id); return; }
+    if (f === 'period') {
+      var key = sec.pt === 'date' ? inp.value : parsePeriod(sec.pt, inp.value);
+      if (!key) { toast(sec.pt === 'date' ? 'Pick a date.' : 'Enter the period like ' + PHINT[sec.pt] + '.'); resyncM(id); return; }
+      saveM(id, { period: key });
+      return;
+    }
+    var col = sec.cols.filter(function (c) { return c.k === f; })[0], vals = {};
+    if (!col) return;
+    if (col.kind === 'text') { vals[f] = inp.value.trim(); saveM(id, { v: vals }); return; }
+    if (!inp.value.trim()) { vals[f] = null; saveM(id, { v: vals }); return; }
+    var p = parseNum(inp.value);
+    if (!p) { toast('Enter a number.'); resyncM(id); return; }
+    inp.value = fmtM(col.kind, p.v); paintM(inp, colorM(col.kind, p.v));
+    vals[f] = p.v; saveM(id, { v: vals });
+  }
+  var XICON = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  async function deleteMRow(btn) {
+    var row = btn.closest('.mrow'), id = row.getAttribute('data-m'), d = macroById(id);
+    if (!d) return;
+    var hasNote = !!(d.note && String(d.note).trim());
+    var hasVal = Object.keys(d.v || {}).some(function (k) { var x = d.v[k]; return x != null && x !== ''; });
+    if ((hasNote || hasVal) && !btn.hasAttribute('data-armed')) {
+      btn.setAttribute('data-armed', ''); btn.classList.add('armed'); btn.textContent = 'Sure?';
+      setTimeout(function () {
+        if (btn.isConnected && btn.hasAttribute('data-armed')) { btn.removeAttribute('data-armed'); btn.classList.remove('armed'); btn.innerHTML = XICON; }
+      }, 3500);
+      return;
+    }
+    if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+    try { await S.db.doc('macrodata/' + id).delete(); toast('Row deleted.'); }
+    catch (e) { toast(errMsg(e)); }
+  }
+  async function deleteTradeRow(btn) {
+    var row = btn.closest('.row'), id = row.getAttribute('data-id');
+    if (!tradeById(id)) return;
+    if (!btn.hasAttribute('data-armed')) {
+      btn.setAttribute('data-armed', ''); btn.classList.add('armed'); btn.textContent = 'Sure?';
+      setTimeout(function () {
+        if (btn.isConnected && btn.hasAttribute('data-armed')) { btn.removeAttribute('data-armed'); btn.classList.remove('armed'); btn.innerHTML = XICON; }
+      }, 3500);
+      return;
+    }
+    if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+    try {
+      var note = S.notes[id];
+      await S.db.doc('trades/' + id).delete();
+      if (note) await S.db.doc('journal/' + note.id).delete();
+      toast('Trade deleted.');
+    } catch (e) { toast(errMsg(e)); }
+  }
+  function openMacroNote(id, opener) {
+    var d = macroById(id); if (!d) return;
+    var sec = MIDX[d.section];
+    JM.mode = 'macro'; JM.coll = 'macrodata'; JM.id = id; JM.opener = opener; JM.note = null; JM.orig = String(d.note || '');
+    $('#jm-title').textContent = 'Macro note';
+    $('#jm-body').placeholder = 'What does this reading mean for your trades?';
+    $('#jm-sub').innerHTML = '';
+    var a = document.createElement('span'); a.className = 'd'; a.textContent = periodText(sec.pt, d.period);
+    var b = document.createElement('span'); b.className = 'n'; b.textContent = sec.title;
+    $('#jm-sub').appendChild(a); $('#jm-sub').appendChild(b);
+    $('#jm-body').value = JM.orig;
+    var del = $('#jm-del'); del.removeAttribute('data-armed'); del.setAttribute('data-label', 'Delete this row'); del.textContent = 'Delete this row';
+    $('#jm').hidden = false;
+    $('#jm-body').focus();
+  }
+  function buildMacroSkeleton() {
+    var host = $('#msections'), nav = $('#secnav');
+    MSEC.forEach(function (sec) {
+      var tpl = '128px ' + sec.cols.map(function (c) { return c.kind === 'text' ? 'minmax(140px,1.2fr)' : 'minmax(112px,1fr)'; }).join(' ') + ' 96px';
+      var minW = 128 + 96 + sec.cols.reduce(function (a, c) { return a + (c.kind === 'text' ? 140 : 112); }, 0);
+      var fill = ''; for (var i = 0; i <= sec.cols.length; i++) fill += '<div class="mcell"></div>';
+      var s = document.createElement('section'); s.className = 'msec'; s.id = 'ms-' + sec.id;
+      s.style.setProperty('--mcols', tpl);
+      s.innerHTML = '<div class="msec-head"><h2>' + esc(sec.title) + '</h2><span class="fpill">' + esc(sec.freq) + '</span></div>' +
+        '<div class="mscroll"><div style="min-width:' + minW + 'px">' +
+        '<div class="mrow mhead" aria-hidden="true"><div class="mcell"></div>' +
+        sec.cols.map(function (c) { return '<div class="mcell mh"><span class="ml">' + esc(c.label) + '</span>' + (c.unit ? '<span class="mu">' + esc(c.unit) + '</span>' : '') + '</div>'; }).join('') +
+        '<div class="mcell"></div></div>' +
+        '<div id="mr-' + sec.id + '"></div>' +
+        '<p class="mempty" id="me-' + sec.id + '" hidden>No readings yet. Tap + to add the first one.</p>' +
+        '<div class="mrow madd"><div class="mcell mper"><button class="addbtn" type="button" data-act="madd" data-sec="' + sec.id + '" aria-label="Add a row to ' + esc(sec.title) + '"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>' + fill + '</div>' +
+        '</div></div>' +
+        '<button class="linkbtn mmore" id="mm-' + sec.id + '" type="button" data-act="mmore" data-sec="' + sec.id + '" hidden></button>';
+      host.appendChild(s);
+      var nb = document.createElement('button'); nb.type = 'button'; nb.setAttribute('data-act', 'msec'); nb.setAttribute('data-sec', sec.id); nb.textContent = sec.title;
+      nav.appendChild(nb);
+    });
+    var view = $('#view-macro');
+    view.addEventListener('input', function (e) {
+      var inp = e.target, kind = inp.getAttribute && inp.getAttribute('data-kind');
+      if (kind !== 'sign' && kind !== 'pmi') return;
+      var p = parseNum(inp.value);
+      if (kind === 'sign') paintM(inp, p ? (p.sign < 0 ? 'neg' : (p.sign > 0 ? 'pos' : 'neu')) : 'neu');
+      else paintM(inp, p ? colorM(kind, p.v) : 'neu');
+    });
+    view.addEventListener('change', onMChange);
+    view.addEventListener('focusout', function (e) { if (e.target.classList && e.target.classList.contains('pedit')) endPeriodEdit(e.target); });
+    view.addEventListener('keydown', function (e) {
+      var inp = e.target; if (!inp.getAttribute) return;
+      if (e.key === 'Escape' && inp.classList.contains('pedit')) { inp.value = inp.getAttribute('data-orig') || ''; inp.blur(); return; }
+      var f = inp.getAttribute('data-mf');
+      if (e.key !== 'Enter' || !f || (f === 'period' && inp.type === 'date')) return;
+      e.preventDefault();
+      if (inp.classList.contains('pedit')) { inp.blur(); return; }
+      var row = inp.closest('.mrow'), list = Array.prototype.slice.call(row.querySelectorAll('[data-kind]')), i = list.indexOf(inp);
+      if (i > -1 && i < list.length - 1) list[i + 1].focus(); else inp.blur();
+    });
+  }
+
+  /* ---------- geopolitics ---------- */
+  var gcache = {}, gsig = '';
+  var IMPACT = { pos: 'Positive', neg: 'Negative', neu: 'Neutral' };
+  var INEXT = { neu: 'pos', pos: 'neg', neg: 'neu' };
+  function geoById(id) { for (var i = 0; i < S.geo.length; i++) if (S.geo[i].id === id) return S.geo[i]; return null; }
+  function gCand(field, prefix) {
+    var lp = prefix.toLowerCase(), cnt = {}, disp = {};
+    S.geo.forEach(function (g) {
+      var x = String(g[field] || '').trim(); if (!x) return;
+      var k = x.toLowerCase(); cnt[k] = (cnt[k] || 0) + 1; disp[k] = x;
+    });
+    var keys = Object.keys(cnt).filter(function (k) { return k.indexOf(lp) === 0 && k !== lp; });
+    keys.sort(function (a, b) { return cnt[b] - cnt[a] || (a < b ? -1 : 1); });
+    return keys.length ? disp[keys[0]] : null;
+  }
+  function gAutofill(e) {
+    var inp = e.target, f = inp.getAttribute && inp.getAttribute('data-gf');
+    if ((f !== 'region' && f !== 'affects') || e.isComposing || (e.inputType && e.inputType.indexOf('delete') === 0)) return;
+    var val = inp.value;
+    if (!val || inp.selectionStart !== val.length) return;
+    var c = gCand(f, val);
+    if (!c) return;
+    inp.value = c;
+    try { inp.setSelectionRange(val.length, c.length); } catch (_) { /* ignore */ }
+  }
+  function buildGRow(g) {
+    var el = document.createElement('div'), id = g.id;
+    el.className = 'grow'; el.setAttribute('data-g', id);
+    el.innerHTML =
+      '<div class="cell date"><label class="day" for="g-' + id + '-date"><span class="dnum"></span><span class="dmon"></span><input class="dpick" id="g-' + id + '-date" data-gf="date" type="date" aria-label="Date"></label></div>' +
+      '<div class="cell"><input class="fld" id="g-' + id + '-region" data-gf="region" placeholder="Region" aria-label="Region" autocomplete="off" spellcheck="false"></div>' +
+      '<div class="cell"><input class="fld" id="g-' + id + '-event" data-gf="event" placeholder="What happened" aria-label="Event" autocomplete="off"></div>' +
+      '<div class="cell"><input class="fld" id="g-' + id + '-affects" data-gf="affects" placeholder="Affects" aria-label="What it affects" autocomplete="off" spellcheck="false"></div>' +
+      '<div class="cell" style="text-align:center"><button class="ipill" type="button" data-act="gimpact"></button><span class="exp" hidden>example</span></div>' +
+      '<div class="cell jr"><button class="jbtn" type="button" data-act="gnote">' + PEN + '</button><button class="jbtn discard" type="button" data-act="gdel" aria-label="Delete this row">' + XICON + '</button></div>';
+    return el;
+  }
+  function syncGRow(el, g, force) {
+    var key = String(g.date || '');
+    el.querySelector('.dnum').textContent = dayOf(key);
+    var mi = parseInt(key.slice(5, 7), 10) - 1, yy = key.slice(2, 4), cy = String(new Date().getFullYear()).slice(2);
+    el.querySelector('.dmon').textContent = (MONTHS[mi] || '') + (yy && yy !== cy ? " '" + yy : '');
+    var q = function (f) { return el.querySelector('[data-gf="' + f + '"]'); };
+    setIfIdle(q('date'), key, force);
+    setIfIdle(q('region'), String(g.region || ''), force);
+    setIfIdle(q('event'), String(g.event || ''), force);
+    setIfIdle(q('affects'), String(g.affects || ''), force);
+    var imp = (g.impact === 'pos' || g.impact === 'neg') ? g.impact : 'neu', pill = el.querySelector('.ipill');
+    pill.className = 'ipill ' + imp; pill.textContent = IMPACT[imp];
+    pill.setAttribute('aria-label', 'Market impact: ' + IMPACT[imp] + '. Tap to change.');
+    el.querySelector('.exp').hidden = !g.example;
+    var jb = el.querySelector('.jbtn');
+    jb.classList.toggle('has', !!(g.note && String(g.note).trim()));
+    jb.setAttribute('aria-label', 'Write a note for ' + (g.region || 'this event') + ' on ' + fmtDateLong(key));
+  }
+  function buildGMonth(key) {
+    var el = document.createElement('div'), mi = parseInt(key.slice(5, 7), 10) - 1;
+    el.className = 'grow month';
+    el.innerHTML = '<div class="cell date"><div><span class="mname">' + (MONTHS[mi] || '—') + '</span><span class="yr">' + esc(key.slice(0, 4)) + '</span></div></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>';
+    return el;
+  }
+  function renderGeo() {
+    var list = $('#glist');
+    var gs = S.geo.slice().sort(function (a, b) {
+      var da = a.date || '', db = b.date || '';
+      if (da !== db) return da < db ? -1 : 1;
+      var ca = a.createdAt || 0, cb = b.createdAt || 0;
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return a.id < b.id ? -1 : 1;
+    }), items = [], prev = null, live = {};
+    gs.forEach(function (g) {
+      var k = String(g.date || '').slice(0, 7);
+      if (k !== prev) { items.push({ m: true, key: k }); prev = k; }
+      items.push({ g: g });
+      live[g.id] = 1;
+      var el = gcache[g.id] || (gcache[g.id] = buildGRow(g));
+      syncGRow(el, g, false);
+    });
+    Object.keys(gcache).forEach(function (id) { if (!live[id]) delete gcache[id]; });
+    var sig = items.map(function (i) { return i.m ? 'M' + i.key : 'R' + i.g.id; }).join('|');
+    if (sig !== gsig) {
+      gsig = sig;
+      var ae = document.activeElement, keep = (ae && list.contains(ae)) ? ae : null, frag = document.createDocumentFragment();
+      items.forEach(function (i) { frag.appendChild(i.m ? buildGMonth(i.key) : gcache[i.g.id]); });
+      list.replaceChildren(frag);
+      if (keep && keep.isConnected) { try { keep.focus(); } catch (_) { /* ignore */ } }
+    }
+    $('#gempty').hidden = gs.length > 0 || !S.loaded.geo;
+    $('#gex-note').hidden = !S.geo.some(function (g) { return g.example; });
+    if (S.gPending && gcache[S.gPending] && gcache[S.gPending].isConnected) {
+      var f = gcache[S.gPending].querySelector('[data-gf="region"]'); S.gPending = null;
+      if (f) f.focus();
+    }
+  }
+  function resyncG(id) { var g = geoById(id), el = gcache[id]; if (g && el) syncGRow(el, g, true); }
+  async function saveG(id, data) {
+    if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+    data.example = false;
+    try { await S.db.doc('geo/' + id).update(data); }
+    catch (e) { toast(errMsg(e)); resyncG(id); }
+  }
+  function onGChange(e) {
+    var inp = e.target, f = inp.getAttribute && inp.getAttribute('data-gf');
+    if (!f) return;
+    var row = inp.closest('.grow'), id = row.getAttribute('data-g'), data = {};
+    if (!geoById(id)) return;
+    if (f === 'date') {
+      if (!inp.value) { resyncG(id); return; }
+      data.date = inp.value;
+    } else data[f] = inp.value.trim();
+    saveG(id, data);
+  }
+  async function addGRow() {
+    if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+    var ref = S.db.collection('geo').doc();
+    S.gPending = ref.id;
+    try { await ref.set({ date: today(), region: '', event: '', affects: '', impact: 'neu', note: '', createdAt: Date.now() }); }
+    catch (e) { S.gPending = null; toast(errMsg(e)); }
+  }
+  async function deleteGRow(btn) {
+    var id = btn.closest('.grow').getAttribute('data-g'), g = geoById(id);
+    if (!g) return;
+    var filled = !!(String(g.region || '').trim() || String(g.event || '').trim() || String(g.affects || '').trim() || String(g.note || '').trim());
+    if (filled && !btn.hasAttribute('data-armed')) {
+      btn.setAttribute('data-armed', ''); btn.classList.add('armed'); btn.textContent = 'Sure?';
+      setTimeout(function () {
+        if (btn.isConnected && btn.hasAttribute('data-armed')) { btn.removeAttribute('data-armed'); btn.classList.remove('armed'); btn.innerHTML = XICON; }
+      }, 3500);
+      return;
+    }
+    if (!S.db) { toast('Saving is unavailable in this view.'); return; }
+    try { await S.db.doc('geo/' + id).delete(); toast('Row deleted.'); }
+    catch (e) { toast(errMsg(e)); }
+  }
+  function openGeoNote(id, opener) {
+    var g = geoById(id); if (!g) return;
+    JM.mode = 'geo'; JM.coll = 'geo'; JM.id = id; JM.opener = opener; JM.note = null; JM.orig = String(g.note || '');
+    $('#jm-title').textContent = 'Geopolitics note';
+    $('#jm-body').placeholder = 'What is the situation, and how could it move your positions?';
+    $('#jm-sub').innerHTML = '';
+    var a = document.createElement('span'); a.className = 'd'; a.textContent = fmtDateLong(g.date);
+    var b = document.createElement('span'); b.className = 'n'; b.textContent = g.region || 'Event';
+    var c = document.createElement('span'); c.className = 't'; c.textContent = g.event || '';
+    [a, b, c].forEach(function (x) { $('#jm-sub').appendChild(x); });
+    $('#jm-body').value = JM.orig;
+    var del = $('#jm-del'); del.removeAttribute('data-armed'); del.setAttribute('data-label', 'Delete this row'); del.textContent = 'Delete this row';
+    $('#jm').hidden = false;
+    $('#jm-body').focus();
+  }
+  function bindGeo() {
+    var view = $('#view-geo');
+    view.addEventListener('input', gAutofill);
+    view.addEventListener('change', onGChange);
+    view.addEventListener('keydown', function (e) {
+      var inp = e.target, f = inp.getAttribute && inp.getAttribute('data-gf');
+      if (e.key !== 'Enter' || !f || f === 'date') return;
+      e.preventDefault();
+      var nxt = { region: 'event', event: 'affects' }[f], row = inp.closest('.grow'), nel = nxt ? row.querySelector('[data-gf="' + nxt + '"]') : null;
+      if (nel) nel.focus(); else inp.blur();
+    });
+  }
+
+  /* ---------- routing ---------- */
+  function route() {
+    var h = (location.hash || '').replace('#', '');
+    S.route = (h === 'macro' || h === 'geo') ? h : 'trade';
+    $('#view-trade').hidden = S.route !== 'trade';
+    $('#view-macro').hidden = S.route !== 'macro';
+    $('#view-geo').hidden = S.route !== 'geo';
+    $('#page-title').textContent = { trade: 'Trades', macro: 'Macro', geo: 'Geopolitics' }[S.route];
+    Array.prototype.forEach.call(document.querySelectorAll('.pills a'), function (a) {
+      if (a.getAttribute('href') === '#' + S.route) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+  }
+  window.addEventListener('hashchange', route);
+
+  /* ---------- start ---------- */
+  async function init() {
+    buildMacroSkeleton();
+    bindGeo();
+    route(); renderAll();
+    S.db = await Auth.start();
+    if (!S.db) { $('#add-trade').disabled = true; return; }
+    var timer = setTimeout(function () { if (!S.loaded.trades) $('#status').textContent = 'Cannot reach your saved data yet. What you see may be out of date.'; }, 10000);
+    ['trades', 'journal', 'macrodata', 'geo'].forEach(function (col) {
+      S.db.collection(col).onSnapshot(function (snap) {
+        S[col] = snap.docs.map(function (d) { var o = {}, x = d.data() || {}; for (var k in x) o[k] = x[k]; o.id = d.id; return o; });
+        S.loaded[col] = true;
+        if (S.loaded.trades) clearTimeout(timer);
+        schedule();
+      }, function (err) {
+        S.loaded[col] = true;
+        $('#status').textContent = err && err.code === 'revoked' ? 'Access to this page was withdrawn.' : 'Some data could not be loaded.';
+        schedule();
+      });
+    });
+  }
+  init();
+})();
+</script>
+
+</body>
+</html>
