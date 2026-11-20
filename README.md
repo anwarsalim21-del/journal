@@ -49,6 +49,6 @@ Opening `index.html` by double-clicking can work, but signing in is more reliabl
 ## If something goes wrong
 
 - "This site is not connected to a database yet": `config.js` still has the placeholder text.
-- "Could not load your data": `schema.sql` has not been run, or the URL or key in `config.js` is wrong.
+- "Could not load your data": `schema.sql` has not been run (or run it again, it is safe to repeat), or the URL or key in `config.js` is wrong.
 - "Could not load the database library": the page could not reach its script on the internet. Check your connection.
 - Sign-in says the email is not confirmed: confirm it from the email, or turn off **Confirm email**.

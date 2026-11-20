@@ -15,6 +15,10 @@ create table if not exists public.docs (
 
 alter table public.docs enable row level security;
 
+-- Newer Supabase projects do not grant table access automatically.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.docs to authenticated;
+
 drop policy if exists "docs select own" on public.docs;
 drop policy if exists "docs insert own" on public.docs;
 drop policy if exists "docs update own" on public.docs;
