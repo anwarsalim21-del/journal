@@ -1,7 +1,6 @@
-// Fill in these two values from your Supabase project:
-// Project Settings -> API -> "Project URL" and the "anon public" key.
-// The anon key is meant to be public. Never paste the "service_role" key here.
+// Supabase connection. The publishable (anon) key is meant to be public.
+// Never put a "secret" or "service_role" key in this file.
 window.APP_CONFIG = {
-  SUPABASE_URL: 'YOUR-PROJECT-URL',
-  SUPABASE_ANON_KEY: 'YOUR-ANON-KEY'
+  SUPABASE_URL: 'https://mosbctlqkbbmtbgntnfo.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_4z-oVDSQzCnubQvSlvO4IQ_0PjgHw6i'
 };
